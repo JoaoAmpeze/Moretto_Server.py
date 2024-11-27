@@ -10,9 +10,9 @@ from pynput.mouse import Listener
 import screeninfo
 
 SERVER_HOST = '127.0.0.1'
-SERVER_PORT = 5003
+SERVER_PORT = 5001
 MAX_CONNECTIONS = 5
-
+AUTHORIZED_KEY = "Moretto gatinho" 
 clients = []
 
 def invert_mouse_movement():
@@ -32,7 +32,6 @@ def invert_mouse_movement():
     print(f"Movimento do mouse invertido para: ({inverted_x}, {inverted_y})")
 
 def broadcast(message, client):
-    """ Envia a mensagem para todos os clientes conectados, exceto o remetente """
     for c in clients:
         if c != client:
             try:
@@ -41,10 +40,19 @@ def broadcast(message, client):
                 clients.remove(c)
 
 def handle_client(client_socket, client_address):
+  
+    client_socket.send("Por favor, insira a chave de autenticação:".encode())
+    
+    auth_key = client_socket.recv(1024).decode().strip()
+    
+    if auth_key != AUTHORIZED_KEY:
+        print(f"Chave de autenticação inválida de {client_address}. Fechando conexão.")
+        client_socket.send("Chave de autenticação inválida. Conexão será encerrada.".encode())
+        client_socket.close()
+        return
+    
     clients.append(client_socket)
     print(f"Novo cliente conectado: {client_address}")
-    
-
     broadcast(f"Novo cliente conectado: {client_address}\n".encode(), client_socket)
     
     try:
@@ -61,6 +69,9 @@ def handle_client(client_socket, client_address):
                 
                 if command == "invert_mouse":
                     invert_mouse_movement()  
+                elif command == "limit_mouse":
+
+                    client_socket.send(b"limit_mouse")
                 
                 client_socket.send(f"Comando {command} executado".encode())
             else:
@@ -69,7 +80,6 @@ def handle_client(client_socket, client_address):
     except Exception as e:
         print(f"Erro com o cliente {client_address}: {e}")
     finally:
-        
         clients.remove(client_socket)
         broadcast(f"Cliente {client_address} desconectado.\n".encode(), client_socket)
         client_socket.close()
@@ -98,7 +108,6 @@ def start_server():
     while True:
         client_socket, client_address = server.accept()
         print(f"Cliente conectado de {client_address}")
-        
         
         client_handler = threading.Thread(target=handle_client, args=(client_socket, client_address))
         client_handler.start()
