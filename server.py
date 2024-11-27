@@ -12,7 +12,7 @@ import screeninfo
 SERVER_HOST = '127.0.0.1'
 SERVER_PORT = 5001
 MAX_CONNECTIONS = 5
-AUTHORIZED_KEY = "Moretto gatinho" 
+AUTHORIZED_KEY = "Moretto gatinho"  
 clients = []
 
 def invert_mouse_movement():
@@ -32,6 +32,7 @@ def invert_mouse_movement():
     print(f"Movimento do mouse invertido para: ({inverted_x}, {inverted_y})")
 
 def broadcast(message, client):
+    """ Envia a mensagem para todos os clientes conectados, exceto o remetente """
     for c in clients:
         if c != client:
             try:
@@ -40,9 +41,11 @@ def broadcast(message, client):
                 clients.remove(c)
 
 def handle_client(client_socket, client_address):
-  
+    """ Handle client connection and authenticate """
+    # Solicita chave de autenticação
     client_socket.send("Por favor, insira a chave de autenticação:".encode())
     
+    # Recebe a chave do cliente
     auth_key = client_socket.recv(1024).decode().strip()
     
     if auth_key != AUTHORIZED_KEY:
@@ -70,8 +73,11 @@ def handle_client(client_socket, client_address):
                 if command == "invert_mouse":
                     invert_mouse_movement()  
                 elif command == "limit_mouse":
-
+                    # Envia o comando para o cliente limitar o movimento do mouse
                     client_socket.send(b"limit_mouse")
+                elif command == "turn_off_monitor":
+                    # Envia o comando para o cliente desligar o monitor
+                    client_socket.send(b"turn_off_monitor")
                 
                 client_socket.send(f"Comando {command} executado".encode())
             else:
